@@ -13,6 +13,14 @@ def load_user(id: str | int) -> "User":
     return db.session.get(User, int(id))
 
 
+followers = sa.Table(
+    "followers",
+    db.metadata,
+    sa.Column("follower_id", sa.Integer, sa.ForeignKey("user.id"), primary_key=True),
+    sa.Column("followed_id", sa.Integer, sa.ForeignKey("user.id"), primary_key=True),
+)
+
+
 class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(
@@ -32,6 +40,18 @@ class User(UserMixin, db.Model):
     )
 
     posts: so.WriteOnlyMapped["Post"] = so.relationship(back_populates="author")
+    following: so.WriteOnlyMapped["User"] = so.relationship(
+        secondary=followers,
+        primaryjoin=(followers.c.follower_id == id),
+        secondaryjoin=(followers.c.followed_id == id),
+        back_populates="followers",
+    )
+    followers: so.WriteOnlyMapped["User"] = so.relationship(
+        secondary=followers,
+        primaryjoin=(followers.c.followed_id == id),
+        secondaryjoin=(followers.c.follower_id == id),
+        back_populates="following",
+    )
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -42,6 +62,37 @@ class User(UserMixin, db.Model):
     def avatar(self, size):
         digest = md5(self.email.lower().encode("utf-8")).hexdigest()
         return f"https://www.gravatar.com/avatar/{digest}?d=identicon&s={size}"
+
+    def follow(self, user):
+        if not self.is_following(user):
+            self.following.add(user)
+
+    def unfollow(self, user):
+        if self.is_following(user):
+            self.following.remove(user)
+
+    def is_following(self, user: "User"):
+        query = self.followers.select().where(User.id == user.id)
+        return db.session.scalar(query) is not None
+
+    def followers_cout(self):
+        query = sa.select(sa.func.count()).select_from(self.followers.select().subquery())
+        return db.session.scalar(query)
+
+    def following_count(self):
+        query = sa.select(sa.func.count()).select_from(self.following.select().subquery())
+        return db.session.scalar(query)
+
+    def followig_posts(self):
+        Author = so.aliased(User)
+        Follower = so.aliased(User)
+        return (
+            sa.select(Post)
+            .join(Post.author.of_type(Author))
+            .join(Author.followers.of_type(Follower))
+            .where(Follower.id == self.id)
+            .order_by(Post.timestamp.desc())
+        )
 
     def __repr__(self):
         return f"<User {self.username}>"
