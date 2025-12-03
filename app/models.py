@@ -72,10 +72,10 @@ class User(UserMixin, db.Model):
             self.following.remove(user)
 
     def is_following(self, user: "User"):
-        query = self.followers.select().where(User.id == user.id)
+        query = self.following.select().where(User.id == user.id)
         return db.session.scalar(query) is not None
 
-    def followers_cout(self):
+    def followers_count(self):
         query = sa.select(sa.func.count()).select_from(self.followers.select().subquery())
         return db.session.scalar(query)
 
@@ -83,14 +83,20 @@ class User(UserMixin, db.Model):
         query = sa.select(sa.func.count()).select_from(self.following.select().subquery())
         return db.session.scalar(query)
 
-    def followig_posts(self):
+    def following_posts(self):
         Author = so.aliased(User)
         Follower = so.aliased(User)
         return (
             sa.select(Post)
             .join(Post.author.of_type(Author))
-            .join(Author.followers.of_type(Follower))
-            .where(Follower.id == self.id)
+            .join(Author.followers.of_type(Follower), isouter=True)
+            .where(
+                sa.or_(
+                    Follower.id == self.id,
+                    Author.id == self.id,
+                )
+            )
+            .group_by(Post)
             .order_by(Post.timestamp.desc())
         )
 
