@@ -6,8 +6,9 @@ from hashlib import md5
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+from flask import current_app
 from flask_login import UserMixin
-from app import db, login, app
+from app import db, login
 
 
 @login.user_loader
@@ -108,7 +109,7 @@ class User(UserMixin, db.Model):
                 "reset_password": self.id,
                 "exp": time() + expires_in,
             },
-            key=app.config["SECRET_KEY"],
+            key=current_app.config["SECRET_KEY"],
             algorithm="HS256",
         )
 
@@ -117,7 +118,7 @@ class User(UserMixin, db.Model):
         try:
             _id = jwt.decode(
                 token,
-                key=app.config["SECRET_KEY"],
+                key=current_app.config["SECRET_KEY"],
                 algorithms=["HS256"],
             )["reset_password"]
         except:
@@ -135,6 +136,7 @@ class Post(db.Model):
         index=True,
         default=lambda: datetime.now(timezone.utc),
     )
+    language: so.Mapped[Optional[str]] = so.mapped_column(sa.String(5))
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(User.id), index=True)
 
     author: so.Mapped[User] = so.relationship(back_populates="posts")
