@@ -20,3 +20,4 @@ class Config:
     ADMINS = ["89090168690@mail.ru"]
     POSTS_PER_PAGE = 15
     LANGUAGES = ["en", "ru"]
+    ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL")
