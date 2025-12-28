@@ -9,5 +9,6 @@ async function translate(sourceElem, destElem) {
     }),
   });
   const data = await response.json();
+
   document.getElementById(destElem).innerText = data.text;
 }
