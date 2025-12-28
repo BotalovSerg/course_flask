@@ -1,8 +1,11 @@
 ### Run local mail service
+
 ```
 aiosmtpd -n -c aiosmtpd.handlers.Debugging -l localhost:8025
 ```
-before 
+
+before
+
 ```
 export MAIL_SERVER=localhost
 export MAIL_PORT=8025
@@ -19,5 +22,5 @@ docker run --name elasticsearch -d --rm -p 9200:9200 \
 ```
 
 ```
-curl http://localhost:9200 
+curl http://localhost:9200
 ```
